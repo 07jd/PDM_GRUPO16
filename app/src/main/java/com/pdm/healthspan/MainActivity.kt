@@ -24,16 +24,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pdm.healthspan.ui.home.Home
 import com.pdm.healthspan.ui.theme.HealthspanTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            val viewModel   = viewModel { MainViewModel() }
             HealthspanTheme {
-                HealthspanApp()
+                HealthspanApp(viewModel)
             }
         }
     }
@@ -51,7 +54,7 @@ enum class AppDestinations(
 }
 
 @Composable
-fun HealthspanApp() {
+fun HealthspanApp(viewModel: MainViewModel) {
     var currentDestination by rememberSaveable { mutableStateOf(AppDestinations.HOME) }
 
     NavigationSuiteScaffold(
@@ -91,7 +94,14 @@ fun HealthspanApp() {
                         .padding(horizontal = 12.dp)
                 ) {
                     when(current) {
-                        AppDestinations.HOME -> Home()
+                        AppDestinations.HOME -> {
+                            val uiState by viewModel.biometricsUiState.collectAsStateWithLifecycle()
+                            Home(
+                                uiState,
+                                viewModel.desiredPermissions,
+                                viewModel::onHomeEvent
+                            )
+                        }
                         AppDestinations.EXERCISES -> Text("exercises")
                         AppDestinations.SETTINGS -> Text("settings")
                     }
