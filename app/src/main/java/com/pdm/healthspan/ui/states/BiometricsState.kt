@@ -13,6 +13,13 @@ enum class BiometricsType {
     RMSSD
 }
 
+enum class SleepStages {
+    UNKNOWN,
+    AWAKE,
+    DEEP,
+    LIGHT
+}
+
 @StringRes
 fun BiometricsType.toStringRes(): Int = when(this) {
     BiometricsType.HEART_RATE -> R.string.heart_rate
@@ -25,7 +32,7 @@ fun BiometricsType.toStringRes(): Int = when(this) {
 
 typealias Data = Pair<Instant, Float>
 // SLEEP_START, SLEEP_END, SLEEP_STAGES([START,END,STAGE_TYPE])
-typealias SleepData = Triple<Instant, Instant, List<Triple<Instant, Instant, Int>>>
+typealias SleepData = Triple<Instant, Instant, SleepStages>
 data class BiometricsState(
     val validHealthConnectClient: Boolean?                  = null,
     val refreshing: Boolean                                 = false,
@@ -33,7 +40,7 @@ data class BiometricsState(
 
     // Data
     // Null = no permission to get data
-    val heartRate  : List<Data>?                           = null,
+    val heartRate   : List<Data>?                           = null,
     val rpm         : List<Data>?                           = null,
     val spo2        : List<Data>?                           = null,
     val sleep       : List<SleepData>?                      = null,

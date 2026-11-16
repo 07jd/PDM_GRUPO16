@@ -1,5 +1,6 @@
 package com.pdm.healthspan.ui.home
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.health.connect.client.PermissionController
 import com.pdm.healthspan.R
 import com.pdm.healthspan.ui.components.BiometricCharts
 import com.pdm.healthspan.ui.states.BiometricsState
+import androidx.core.net.toUri
 
 @Composable
 fun Home(
@@ -59,13 +61,22 @@ fun Home(
 
             // Permissions button
             Button(
-                enabled = uiState.grantedPermissions.size != permissions.size,
+                enabled = uiState.grantedPermissions.size != permissions.size && uiState.validHealthConnectClient != null,
                 onClick = {
-                    requestPermissionLauncher.launch(permissions)
-                    println("${uiState.grantedPermissions.size}/${permissions.size}")
+                    if(uiState.validHealthConnectClient == false) {
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            "https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata".toUri()
+                        )
+
+                        try { context.startActivity(intent) } catch (e: Exception) { println("Failed, ${e.message}") }
+                    } else {
+                        requestPermissionLauncher.launch(permissions)
+                    }
                 }
             ) {
-                Text(text = stringResource(R.string.grant_permissions))
+                Text(text = if(uiState.validHealthConnectClient == false) stringResource(R.string.download_healthconnect)
+                            else stringResource(R.string.grant_permissions))
             }
         }
     }

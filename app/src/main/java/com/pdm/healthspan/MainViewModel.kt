@@ -16,6 +16,7 @@ import androidx.lifecycle.viewModelScope
 import com.pdm.healthspan.ui.home.HomeEvent
 import com.pdm.healthspan.ui.states.BiometricsState
 import com.pdm.healthspan.ui.states.BiometricsType
+import com.pdm.healthspan.ui.states.SleepStages
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -109,21 +110,21 @@ class MainViewModel: ViewModel() {
                         ReadRecordsRequest<SleepSessionRecord>(range)
                     ).records
 
+                    val latestSession = raw.maxByOrNull { it.endTime }
                     _biometricsUiState.update {
                         it.copy(
-                            sleep = raw.map { record ->
-                                Triple(
-                                    record.startTime.toKotlinInstant(),
-                                    record.endTime.toKotlinInstant(),
-                                    record.stages.map { stage ->
-                                        Triple(
-                                            stage.startTime.toKotlinInstant(),
-                                            stage.endTime.toKotlinInstant(),
-                                            stage.stage
-                                        )
-                                    }
-                                )
-                            }
+                            sleep = latestSession?.stages?.map { stage ->
+                                    Triple(
+                                        stage.startTime.toKotlinInstant(),
+                                        stage.endTime.toKotlinInstant(),
+                                        when(stage.stage) {
+                                            SleepSessionRecord.STAGE_TYPE_AWAKE -> SleepStages.AWAKE
+                                            SleepSessionRecord.STAGE_TYPE_DEEP -> SleepStages.DEEP
+                                            SleepSessionRecord.STAGE_TYPE_LIGHT -> SleepStages.LIGHT
+                                            else -> SleepStages.UNKNOWN
+                                        }
+                                    )
+                                } ?: emptyList()
                         )
                     }
                 }

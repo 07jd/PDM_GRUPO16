@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,8 +33,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastRoundToInt
+import com.himanshoe.charty.block.BlockBarChart
+import com.himanshoe.charty.block.config.BlockBarChartConfig
+import com.himanshoe.charty.block.data.BlockData
 import com.himanshoe.charty.color.ChartyColor
 import com.himanshoe.charty.common.config.Animation
+import com.himanshoe.charty.common.config.CornerRadius
 import com.himanshoe.charty.common.config.LineInterpolation
 import com.himanshoe.charty.common.config.PersistentMarker
 import com.himanshoe.charty.common.config.ReferenceLineConfig
@@ -43,10 +49,12 @@ import com.pdm.healthspan.R
 import com.pdm.healthspan.ui.states.BiometricsState
 import com.pdm.healthspan.ui.states.BiometricsType
 import com.pdm.healthspan.ui.states.SleepData
+import com.pdm.healthspan.ui.states.SleepStages
 import com.pdm.healthspan.ui.states.toStringRes
 import kotlin.collections.map
 import kotlin.math.roundToInt
 import kotlin.time.Clock
+import kotlin.time.DurationUnit
 import kotlin.time.Instant
 @RequiresExtension(extension = Build.VERSION_CODES.UPSIDE_DOWN_CAKE, version = 7)
 @Composable
@@ -261,32 +269,98 @@ private fun LineChart(
 @Composable
 private fun SleepChart(data: List<SleepData>) {
     val chartData = remember(data) {
-        data.flatMap { sleepSession ->
-            sleepSession.third.flatMap { (_, _, stage) ->
-                listOf(
-                    LineData(
-                        label = "",
-                        value = stage.toFloat()
-                    ),
-                    LineData(
-                        label = "",
-                        value = stage.toFloat()
-                    )
-                )
+        var awake       = 0.0
+        var sleepDeep   = 0.0
+        var sleepLight  = 0.0
+        var unknown     = 0.0
+
+        data.forEach { stage ->
+            val time = stage.second.minus(stage.first).toLong(DurationUnit.SECONDS)
+            when(stage.third) {
+                SleepStages.UNKNOWN -> unknown += time
+                SleepStages.AWAKE   -> awake += time
+                SleepStages.DEEP    -> sleepDeep += time
+                SleepStages.LIGHT   -> sleepLight += time
             }
         }
+
+        val total = awake + sleepLight + sleepDeep + unknown
+
+        awake       = awake.div(total)
+        sleepDeep   = sleepDeep.div(total)
+        sleepLight  = sleepLight.div(total)
+        unknown     = unknown.div(total)
+
+        listOf(
+            awake.toFloat(),
+            sleepDeep.toFloat(),
+            sleepLight.toFloat(),
+            unknown.toFloat()
+        )
     }
 
-    AreaChart(
-        modifier = Modifier.fillMaxWidth(),
-        data = { chartData },
-        color = ChartyColor.Solid(Color(0xFF7986CB)),
-        lineConfig = LineChartConfig(
-            lineWidth = 3f,
-            showPoints = false,
-            interpolation = LineInterpolation.STEP,
-            fillAlpha = 0.3f,
-            animation = Animation.Smooth
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        BlockBarChart(
+            modifier = Modifier.fillMaxWidth(),
+            data = {
+                buildList{
+                    add(BlockData(chartData[0], ChartyColor.Solid(Color.Blue)))
+                    add(BlockData(chartData[1], ChartyColor.Solid(Color.Cyan)))
+                    add(BlockData(chartData[2], ChartyColor.Solid(Color.Yellow)))
+                    add(BlockData(chartData[3], ChartyColor.Solid(Color.Gray)))
+                }
+            },
+            blockBarConfig = BlockBarChartConfig(
+                cornerRadius = CornerRadius.Small,
+                gapBetweenBlocks = 10.dp,
+                barHeight = 50.dp,
+            )
         )
-    )
+
+        // Label
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SleepStages.entries.forEach {
+                val color = when(it) {
+                    SleepStages.UNKNOWN -> Color.Gray
+                    SleepStages.AWAKE   -> Color.Yellow
+                    SleepStages.DEEP    -> Color.Blue
+                    SleepStages.LIGHT   -> Color.Cyan
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Box(modifier = Modifier.size(12.dp).background(color))
+                    Text(it.name)
+                }
+            }
+        }
+
+        // Duration label
+        val duration = data.firstOrNull()?.let {
+            val duration = it.second.minus(it.first).inWholeMinutes
+
+            if(duration >= 60) {
+                val minutes = duration % 60
+                val hours = duration / 60
+
+                "$hours:$minutes h"
+            }else {
+                "$duration m"
+            }
+        }
+
+        if(duration != null) {
+            Text(text = "Duration: $duration")
+        }
+    }
 }
