@@ -82,7 +82,7 @@ fun BiometricCharts(
             TextButton(
                 onClick = {
                     val idx = if(currentChartType.ordinal - 1 < 0) {
-                        BiometricsType.entries.size - 1
+                        BiometricsType.entries.size - 2
                     } else { currentChartType.ordinal - 1 }
 
                     currentChartType = BiometricsType.entries[idx] }
@@ -93,7 +93,11 @@ fun BiometricCharts(
 
             // Next button
             TextButton(
-                onClick = { currentChartType = BiometricsType.entries[(currentChartType.ordinal + 1) % BiometricsType.entries.size] }
+                onClick = {
+                    val new = BiometricsType.entries[(currentChartType.ordinal + 1) % BiometricsType.entries.size]
+                    currentChartType =
+                        if(new == BiometricsType.EXERCISES) BiometricsType.entries[0] else new
+                }
             ) { Text(text = stringResource(R.string.next)) }
         }
 
@@ -176,6 +180,7 @@ fun BiometricCharts(
                             LineChart(data = data.rmssd, unit = "ms")
                         }
                     }
+                    else -> {}
                 }
             }
         }

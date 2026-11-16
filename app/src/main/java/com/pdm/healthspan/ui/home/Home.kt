@@ -9,9 +9,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +50,8 @@ fun Home(
     ) { _ -> onEvent(HomeEvent.RefreshGrantedPermissions) }
 
 
+    var showExerciseList by rememberSaveable { mutableStateOf(false) }
+
     PullToRefreshBox(
         isRefreshing = uiState.refreshing,
         onRefresh = { onEvent(HomeEvent.Refresh) },
@@ -55,28 +62,40 @@ fun Home(
             verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Top),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            BiometricCharts(data = uiState)
+            // Show exercise list
+            if(showExerciseList) {
+                ExerciseList(
+                    data = uiState.exercices,
+                    onCreate = { onEvent(HomeEvent.CreateExercise(it)) },
+                    onDelete = { onEvent(HomeEvent.DeleteExercise(it)) },
+                    closeTab = { showExerciseList = false }
+                )
+            } else {
+                BiometricCharts(data = uiState)
 
-            HorizontalDivider(modifier = Modifier.fillMaxWidth())
+                HorizontalDivider(modifier = Modifier.fillMaxWidth())
 
-            // Permissions button
-            Button(
-                enabled = uiState.grantedPermissions.size != permissions.size && uiState.validHealthConnectClient != null,
-                onClick = {
-                    if(uiState.validHealthConnectClient == false) {
-                        val intent = Intent(
-                            Intent.ACTION_VIEW,
-                            "https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata".toUri()
-                        )
+                TextButton(onClick = { showExerciseList = true }) { Text("Show exercise list") }
 
-                        try { context.startActivity(intent) } catch (e: Exception) { println("Failed, ${e.message}") }
-                    } else {
-                        requestPermissionLauncher.launch(permissions)
+                // Permissions button
+                Button(
+                    enabled = uiState.grantedPermissions.size != permissions.size && uiState.validHealthConnectClient != null,
+                    onClick = {
+                        if(uiState.validHealthConnectClient == false) {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                "https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata".toUri()
+                            )
+
+                            try { context.startActivity(intent) } catch (e: Exception) { println("Failed, ${e.message}") }
+                        } else {
+                            requestPermissionLauncher.launch(permissions)
+                        }
                     }
+                ) {
+                    Text(text = if(uiState.validHealthConnectClient == false) stringResource(R.string.download_healthconnect)
+                    else stringResource(R.string.grant_permissions))
                 }
-            ) {
-                Text(text = if(uiState.validHealthConnectClient == false) stringResource(R.string.download_healthconnect)
-                            else stringResource(R.string.grant_permissions))
             }
         }
     }

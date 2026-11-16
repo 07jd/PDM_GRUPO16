@@ -1,14 +1,16 @@
 package com.pdm.healthspan
 
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.deleteRecords
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
-import androidx.health.connect.client.records.PlannedExerciseSessionRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.lifecycle.ViewModel
@@ -23,6 +25,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneId
+import kotlin.time.toJavaInstant
 import kotlin.time.toKotlinInstant
 
 class MainViewModel: ViewModel() {
@@ -43,8 +46,8 @@ class MainViewModel: ViewModel() {
         HealthPermission.getReadPermission<SleepSessionRecord>(),
         HealthPermission.getReadPermission<RespiratoryRateRecord>(),
         HealthPermission.getReadPermission<StepsRecord>(),
-        HealthPermission.getReadPermission<PlannedExerciseSessionRecord>(),
-        HealthPermission.getWritePermission<PlannedExerciseSessionRecord>()
+        HealthPermission.getReadPermission<ExerciseSessionRecord>(),
+        HealthPermission.getWritePermission<ExerciseSessionRecord>()
     )
 
     // Functions
@@ -159,6 +162,14 @@ class MainViewModel: ViewModel() {
                         )
                     }
                 }
+                BiometricsType.EXERCISES -> {
+                    val raw = client.readRecords(
+                        ReadRecordsRequest<ExerciseSessionRecord>(range)
+                    ).records
+
+                    println("EXERCICIOS: $raw")
+                    _biometricsUiState.update { it.copy(exercices = raw) }
+                }
             }
         } catch (e: Exception) {
             println("[readRecords] Failed to read records, reason: ${e.message}")
@@ -203,6 +214,40 @@ class MainViewModel: ViewModel() {
                                 grantedPermissions = healthConnect!!.permissionController.getGrantedPermissions()
                             )
                         }
+                    }
+                }
+                is HomeEvent.CreateExercise -> {
+                    try {
+                        val client = healthConnect!!
+                        client.insertRecords(
+                            listOf(
+                                ExerciseSessionRecord(
+                                    startTime = event.data.first.toJavaInstant(),
+                                    startZoneOffset = null,
+                                    endTime = event.data.second.toJavaInstant(),
+                                    endZoneOffset = null,
+                                    exerciseType = event.data.third,
+                                    metadata = Metadata.manualEntry(device = null)
+                                )
+                            )
+                        )
+                    } catch (e: Exception) {
+                        println("Failed to create exercise: ${e.message}")
+                    } finally {
+                        getDataFromHealthConnect()
+                    }
+                }
+                is HomeEvent.DeleteExercise -> {
+                    try {
+                        val client = healthConnect!!
+                        client.deleteRecords<ExerciseSessionRecord>(
+                            recordIdsList = listOf(event.id),
+                            clientRecordIdsList = emptyList()
+                        )
+                    } catch (e: Exception) {
+                        println("Failed to delete exercise with id ${event.id}, reason : ${e.message}")
+                    } finally {
+                        getDataFromHealthConnect()
                     }
                 }
             }

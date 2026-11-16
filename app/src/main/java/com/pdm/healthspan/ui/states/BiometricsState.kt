@@ -1,6 +1,7 @@
 package com.pdm.healthspan.ui.states
 
 import androidx.annotation.StringRes
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import com.pdm.healthspan.R
 import kotlin.time.Instant
 
@@ -10,7 +11,8 @@ enum class BiometricsType {
     SPO2,
     SLEEP,
     STEPS,
-    RMSSD
+    RMSSD,
+    EXERCISES
 }
 
 enum class SleepStages {
@@ -28,6 +30,7 @@ fun BiometricsType.toStringRes(): Int = when(this) {
     BiometricsType.SLEEP -> R.string.sleep
     BiometricsType.STEPS -> R.string.steps
     BiometricsType.RMSSD -> R.string.rmssd
+    BiometricsType.EXERCISES -> R.string.destination_exercises
 }
 
 typealias Data = Pair<Instant, Float>
@@ -45,5 +48,6 @@ data class BiometricsState(
     val spo2        : List<Data>?                           = null,
     val sleep       : List<SleepData>?                      = null,
     val steps       : List<Triple<Instant, Instant, Long>>? = null,
-    val rmssd       : List<Data>?                           = null
+    val rmssd       : List<Data>?                           = null,
+    val exercices   : List<ExerciseSessionRecord>?          = null
 )
