@@ -16,6 +16,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,20 +26,43 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.pdm.healthspan.ui.home.Home
-import com.pdm.healthspan.ui.theme.HealthspanTheme
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.pdm.healthspan.sensor.StepSensorManager
+import com.pdm.healthspan.ui.home.Home
+import com.pdm.healthspan.ui.steps.StepsScreen
+import com.pdm.healthspan.ui.theme.HealthspanTheme
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var stepSensorManager: StepSensorManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        stepSensorManager = StepSensorManager(this)
         enableEdgeToEdge()
+
         setContent {
-            val viewModel   = viewModel { MainViewModel() }
+            val viewModel = viewModel { MainViewModel() }
+            val liveSteps by stepSensorManager.liveStepsToday.collectAsStateWithLifecycle()
+
+            LaunchedEffect(liveSteps) {
+                viewModel.updateLiveSensorSteps(liveSteps, stepSensorManager.isSensorAvailable)
+            }
+
             HealthspanTheme {
                 HealthspanApp(viewModel)
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        stepSensorManager.startListening()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stepSensorManager.stopListening()
     }
 }
 
@@ -49,6 +73,7 @@ enum class AppDestinations(
     val icons: Pair<Int, Int>
 ) {
     HOME(R.string.destination_home, R.drawable.ic_house to R.drawable.ic_house_fill),
+    STEPS(R.string.destination_steps, R.drawable.ic_footprints to R.drawable.ic_footprints_fill),
     EXERCISES(R.string.destination_exercises, R.drawable.ic_clipboard_heart to R.drawable.ic_clipboard_heart_fill),
     SETTINGS(R.string.destination_settings, R.drawable.ic_gear to R.drawable.ic_gear_fill),
 }
@@ -97,10 +122,15 @@ fun HealthspanApp(viewModel: MainViewModel) {
                         AppDestinations.HOME -> {
                             val uiState by viewModel.biometricsUiState.collectAsStateWithLifecycle()
                             Home(
-                                uiState,
-                                viewModel.desiredPermissions,
-                                viewModel::onHomeEvent
+                                uiState = uiState,
+                                permissions = viewModel.desiredPermissions,
+                                onEvent = viewModel::onHomeEvent,
+                                onNavigateToSteps = { currentDestination = AppDestinations.STEPS }
                             )
+                        }
+                        AppDestinations.STEPS -> {
+                            val uiState by viewModel.biometricsUiState.collectAsStateWithLifecycle()
+                            StepsScreen(uiState = uiState)
                         }
                         AppDestinations.EXERCISES -> Text("exercises")
                         AppDestinations.SETTINGS -> Text("settings")

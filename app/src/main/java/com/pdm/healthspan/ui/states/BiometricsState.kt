@@ -3,6 +3,7 @@ package com.pdm.healthspan.ui.states
 import androidx.annotation.StringRes
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import com.pdm.healthspan.R
+import java.time.LocalDate
 import kotlin.time.Instant
 
 enum class BiometricsType {
@@ -49,5 +50,13 @@ data class BiometricsState(
     val sleep       : List<SleepData>?                      = null,
     val steps       : List<Triple<Instant, Instant, Long>>? = null,
     val rmssd       : List<Data>?                           = null,
-    val exercices   : List<ExerciseSessionRecord>?          = null
+    val exercices   : List<ExerciseSessionRecord>?          = null,
+
+    // Step Tracking Stats
+    val todaySteps          : Long                          = 0L,
+    val weeklySteps         : List<Pair<LocalDate, Long>> = emptyList(),
+    val monthlySteps        : List<Pair<LocalDate, Long>> = emptyList(),
+    val liveSensorSteps     : Long                          = 0L,
+    val isSensorAvailable   : Boolean                       = false,
+    val stepGoal            : Int                           = 10000
 )

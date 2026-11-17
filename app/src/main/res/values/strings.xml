@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Healthspan</string>
     <string name="destination_home">Home</string>
+    <string name="destination_steps">Passos</string>
     <string name="destination_exercises">Exercises</string>
     <string name="destination_settings">Settings</string>
     <string name="next">Next</string>
@@ -15,4 +16,20 @@
     <string name="no_permission">No permission</string>
     <string name="rpm">RPM</string>
     <string name="download_healthconnect">Download Healthconnect</string>
+    <string name="steps_today">Passos de Hoje</string>
+    <string name="weekly_steps">Passos da Semana</string>
+    <string name="monthly_steps">Passos do Mês</string>
+    <string name="daily_goal">Meta Diária</string>
+    <string name="average_daily">Média Diária</string>
+    <string name="total_steps">Total de Passos</string>
+    <string name="distance">Distância</string>
+    <string name="calories">Calorias</string>
+    <string name="sensor_active">Sensor Físico Ativo</string>
+    <string name="sensor_inactive">Apenas Health Connect</string>
+    <string name="see_details">Ver Detalhes</string>
+    <string name="week">Semana</string>
+    <string name="month">Mês</string>
+    <string name="today">Hoje</string>
+    <string name="best_day">Melhor Dia</string>
+    <string name="goal_reached_days">Metas Cumpridas</string>
 </resources>

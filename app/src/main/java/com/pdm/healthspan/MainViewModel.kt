@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlin.time.toJavaInstant
@@ -132,9 +133,39 @@ class MainViewModel: ViewModel() {
                     }
                 }
                 BiometricsType.STEPS -> {
+                    val monthRange = TimeRangeFilter.after(
+                        LocalDateTime
+                            .now()
+                            .minusDays(30)
+                            .atZone(ZoneId.systemDefault())
+                            .toInstant()
+                    )
+
                     val raw = client.readRecords(
-                        ReadRecordsRequest<StepsRecord>(range)
+                        ReadRecordsRequest<StepsRecord>(monthRange)
                     ).records
+
+                    val today = LocalDate.now()
+
+                    val stepsByDate: Map<LocalDate, Long> = raw.groupBy { record ->
+                        record.startTime.atZone(ZoneId.systemDefault()).toLocalDate()
+                    }.mapValues { entry ->
+                        entry.value.sumOf { it.count }
+                    }
+
+                    val monthlyList = (0..29).map { daysBack ->
+                        val date = today.minusDays((29 - daysBack).toLong())
+                        date to (stepsByDate[date] ?: 0L)
+                    }
+
+                    val weeklyList = (0..6).map { daysBack ->
+                        val date = today.minusDays((6 - daysBack).toLong())
+                        date to (stepsByDate[date] ?: 0L)
+                    }
+
+                    val hcTodaySteps = stepsByDate[today] ?: 0L
+                    val liveSensor = _biometricsUiState.value.liveSensorSteps
+                    val totalTodaySteps = maxOf(hcTodaySteps, liveSensor)
 
                     _biometricsUiState.update {
                         it.copy(
@@ -144,7 +175,10 @@ class MainViewModel: ViewModel() {
                                     record.endTime.toKotlinInstant(),
                                     record.count
                                 )
-                            }
+                            },
+                            todaySteps = totalTodaySteps,
+                            weeklySteps = weeklyList,
+                            monthlySteps = monthlyList
                         )
                     }
                 }
@@ -251,6 +285,17 @@ class MainViewModel: ViewModel() {
                     }
                 }
             }
+        }
+    }
+
+    fun updateLiveSensorSteps(sensorSteps: Long, isAvailable: Boolean) {
+        _biometricsUiState.update { currentState ->
+            val totalToday = maxOf(currentState.todaySteps, sensorSteps)
+            currentState.copy(
+                liveSensorSteps = sensorSteps,
+                todaySteps = totalToday,
+                isSensorAvailable = isAvailable
+            )
         }
     }
 }
